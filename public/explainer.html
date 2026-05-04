@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VR-NLP-AI: Neural Translation with Attention</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --accent: #00d9ff;
+            --dark: #0f172a;
+            --darker: #0a0e27;
+            --light: #e2e8f0;
+            --success: #10b981;
+            --warning: #f59e0b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 100%);
+            color: var(--light);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Navigation */
+        nav {
+            position: sticky;
+            top: 0;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 100;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        nav button {
+            padding: 0.75rem 1.5rem;
+            border: 2px solid transparent;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--light);
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        nav button:hover,
+        nav button.active {
+            background: var(--primary);
+            border-color: var(--accent);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Sections */
+        section {
+            display: none;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin: 3rem 0;
+            animation: slideDown 0.8s ease-out;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            font-weight: 800;
+        }
+
+        h2 {
+            font-size: 2.2rem;
+            color: var(--accent);
+            margin: 2.5rem 0 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            color: var(--primary);
+            margin: 2rem 0 1rem;
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        /* Grid Layouts */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            align-items: center;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+            h1 {
+                font-size: 2.5rem;
+            }
+            h2 {
+                font-size: 1.8rem;
+            }
+        }
+
+        /* Cards */
+        .card {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.05));
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 1rem;
+            padding: 2rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.3), transparent);
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.1));
+            box-shadow: 0 20px 50px rgba(99, 102, 241, 0.3);
+        }
+
+        .card:hover::before {
+            top: -20%;
+            right: -20%;
+        }
+
+        .card h3 {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .card p {
+            position: relative;
+            z-index: 2;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+        }
+
+        .icon {
+            font-size: 2rem;
+            display: inline-block;
+        }
+
+        /* SVG Graphics */
+        svg {
+            width: 100%;
+            height: auto;
+            filter: drop-shadow(0 10px 30px rgba(99, 102, 241, 0.2));
+        }
+
+        .svg-container {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 1rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 2rem 0;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        @keyframes slide-in-left {
+            from {
+                opacity: 0;
+                transform: translateX(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes slide-in-right {
+            from {
+                opacity: 0;
+                transform: translateX(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes rotate-smooth {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .animated {
+            animation: slide-in-left 0.8s ease-out;
+        }
+
+        .animated:nth-child(even) {
+            animation: slide-in-right 0.8s ease-out;
+        }
+
+        .floating {
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .pulse-animate {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .rotate-animate {
+            animation: rotate-smooth 20s linear infinite;
+        }
+
+        /* Feature List */
+        .feature-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin: 2rem 0;
+        }
+
+        .feature-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: rgba(99, 102, 241, 0.05);
+            border-left: 3px solid var(--primary);
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .feature-list li:hover {
+            background: rgba(99, 102, 241, 0.15);
+            transform: translateX(10px);
+        }
+
+        .feature-list li::before {
+            content: '✓';
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 2rem;
+            height: 2rem;
+            background: var(--primary);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        /* Process Flow */
+        .process-flow {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin: 3rem 0;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .process-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            flex: 1;
+            min-width: 200px;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .process-step:hover {
+            background: rgba(99, 102, 241, 0.2);
+            transform: scale(1.05);
+        }
+
+        .step-number {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--primary);
+            border-radius: 50%;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+        }
+
+        .process-arrow {
+            font-size: 2rem;
+            color: var(--accent);
+            display: none;
+        }
+
+        @media (min-width: 1024px) {
+            .process-arrow {
+                display: block;
+                flex-shrink: 0;
+            }
+        }
+
+        /* Comparison Table */
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 2rem 0;
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .comparison-table th,
+        .comparison-table td {
+            padding: 1.5rem;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .comparison-table th {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.3), rgba(236, 72, 153, 0.2));
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+        .comparison-table tr:hover {
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .comparison-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* Stat Badge */
+        .stat-badge {
+            display: inline-block;
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 2rem;
+            color: white;
+            font-weight: 600;
+            margin: 0.5rem;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Button */
+        .btn {
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            border: none;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-block;
+        }
+
+        .btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Diagrams */
+        .diagram-container {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+
+        .attention-flow {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* Code Block */
+        .code-block {
+            background: rgba(0, 0, 0, 0.5);
+            border-left: 3px solid var(--accent);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .code-block code {
+            color: var(--accent);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin-top: 3rem;
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            .process-flow {
+                flex-direction: column;
+                gap: 1rem;
+            }
+
+            nav {
+                gap: 0.5rem;
+                overflow-x: auto;
+            }
+
+            nav button {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary), var(--secondary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 600;
+        }
+
+        /* Timeline */
+        .timeline {
+            position: relative;
+            padding: 2rem 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--primary), var(--secondary), transparent);
+            transform: translateX(-50%);
+        }
+
+        .timeline-item {
+            margin-bottom: 2rem;
+            width: 45%;
+            position: relative;
+        }
+
+        .timeline-item:nth-child(even) {
+            margin-left: 55%;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background: var(--primary);
+            border: 3px solid var(--darker);
+            border-radius: 50%;
+            top: 0;
+        }
+
+        .timeline-item:nth-child(even)::before {
+            right: -40px;
+        }
+
+        .timeline-item:nth-child(odd)::before {
+            left: -40px;
+        }
+
+        .timeline-content {
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .timeline::before {
+                left: 20px;
+            }
+
+            .timeline-item,
+            .timeline-item:nth-child(even) {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .timeline-item::before {
+                left: 10px !important;
+            }
+
+            .timeline-item:nth-child(even)::before {
+                right: auto;
+                left: 10px;
+            }
+        }
+
+        /* Highlight box */
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(0, 217, 255, 0.05));
+            border: 2px solid var(--success);
+            border-radius: 1rem;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+
+        .highlight-box h4 {
+            color: var(--success);
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav>
+        <button onclick="switchSection('paper')" class="nav-btn active">📚 The Research</button>
+        <button onclick="switchSection('project')" class="nav-btn">🚀 Our Implementation</button>
+        <button onclick="switchSection('comparison')" class="nav-btn">⚡ How It Works</button>
+    </nav>
+
+    <div class="container">
+        <!-- SECTION 1: THE RESEARCH PAPER -->
+        <section id="paper" class="active">
+            <!-- Header -->
+            <div class="header">
+                <h1>🧠 Neural Machine Translation with Attention</h1>
+                <p class="subtitle">Bahdanau et al., ICLR 2015 - The Breakthrough That Changed AI Translation Forever</p>
+            </div>
+
+            <!-- Problem Section -->
+            <div class="grid-2">
+                <div>
+                    <h2>🎯 The Problem</h2>
+                    <p style="font-size: 1.1rem; margin: 1rem 0;">Before 2015, machine translation relied on encoding entire sentences into a single "fixed-length vector" - like trying to fit an entire book through a drinking straw!</p>
+                    <ul class="feature-list">
+                        <li>Longer sentences performed poorly</li>
+                        <li>Information got lost in compression</li>
+                        <li>Model couldn't focus on relevant parts</li>
+                        <li>Word order changes were difficult</li>
+                    </ul>
+                </div>
+                <div class="svg-container">
+                    <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Input sentence -->
+                        <text x="200" y="30" font-size="16" fill="#e2e8f0" text-anchor="middle" font-weight="bold">Input: "The cat sat on the mat"</text>
+                        
+                        <!-- Straw bottleneck visual -->
+                        <rect x="150" y="60" width="100" height="40" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="2" rx="5"/>
+                        <text x="200" y="90" font-size="12" fill="#e2e8f0" text-anchor="middle">56-dim vector</text>
+                        
+                        <!-- Down arrow -->
+                        <path d="M 200 100 L 200 140" stroke="#ec4899" stroke-width="3" marker-end="url(#arrowhead)"/>
+                        
+                        <!-- Water drops to show compression -->
+                        <circle cx="180" cy="110" r="4" fill="#ec4899" opacity="0.6"/>
+                        <circle cx="200" cy="115" r="4" fill="#ec4899" opacity="0.6"/>
+                        <circle cx="220" cy="112" r="4" fill="#ec4899" opacity="0.6"/>
+                        
+                        <!-- Lost information -->
+                        <rect x="100" y="160" width="200" height="80" fill="rgba(99, 102, 241, 0.1)" stroke="#6366f1" stroke-width="2" stroke-dasharray="5,5" rx="5"/>
+                        <text x="200" y="190" font-size="14" fill="#ff6b6b" text-anchor="middle" font-weight="bold">❌ Information Lost</text>
+                        <text x="200" y="210" font-size="12" fill="#e2e8f0" text-anchor="middle">"The" → "Le/La/L'"?</text>
+                        <text x="200" y="230" font-size="12" fill="#e2e8f0" text-anchor="middle">Word order confusion</text>
+                        
+                        <!-- Arrow marker definition -->
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                <polygon points="0 0, 10 5, 0 10" fill="#ec4899"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Solution Section -->
+            <div style="margin-top: 3rem;">
+                <h2>💡 The Breakthrough Solution: ATTENTION</h2>
+                <p style="font-size: 1.1rem; margin: 1rem 0;">Instead of forcing everything through one bottleneck, the attention mechanism lets the model "look at" different parts of the sentence when translating each word!</p>
+                
+                <div class="svg-container">
+                    <svg viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Source sentence -->
+                        <text x="400" y="30" font-size="16" fill="#e2e8f0" text-anchor="middle" font-weight="bold">Source: The cat sat on the mat</text>
+                        
+                        <!-- Source words -->
+                        <g id="source-words">
+                            <circle cx="100" cy="80" r="20" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2"/>
+                            <text x="100" y="85" font-size="11" fill="#00d9ff" text-anchor="middle" font-weight="bold">The</text>
+                            
+                            <circle cx="180" cy="80" r="20" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2"/>
+                            <text x="180" y="85" font-size="11" fill="#00d9ff" text-anchor="middle" font-weight="bold">cat</text>
+                            
+                            <circle cx="260" cy="80" r="20" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2"/>
+                            <text x="260" y="85" font-size="11" fill="#00d9ff" text-anchor="middle" font-weight="bold">sat</text>
+                            
+                            <circle cx="340" cy="80" r="20" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2"/>
+                            <text x="340" y="85" font-size="11" fill="#00d9ff" text-anchor="middle" font-weight="bold">on</text>
+                            
+                            <circle cx="420" cy="80" r="20" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2"/>
+                            <text x="420" y="85" font-size="11" fill="#00d9ff" text-anchor="middle" font-weight="bold">the</text>
+                            
+                            <circle cx="500" cy="80" r="20" fill="rgba(99, 102, 241, 0.3)" stroke="#6366f1" stroke-width="2"/>
+                            <text x="500" y="85" font-size="11" fill="#00d9ff" text-anchor="middle" font-weight="bold">mat</text>
+                        </g>
+                        
+                        <!-- Attention weights visualization -->
+                        <text x="100" y="150" font-size="14" fill="#10b981" text-anchor="middle" font-weight="bold">ATTENTION: Let</text>
+                        <path d="M 100 160 L 100 80" stroke="#10b981" stroke-width="4" opacity="0.7"/>
+                        <path d="M 100 160 L 180 80" stroke="#10b981" stroke-width="2" opacity="0.4"/>
+                        <path d="M 100 160 L 260 80" stroke="#10b981" stroke-width="1" opacity="0.2"/>
+                        <path d="M 100 160 L 340 80" stroke="#10b981" stroke-width="1" opacity="0.1"/>
+                        <path d="M 100 160 L 420 80" stroke="#10b981" stroke-width="1" opacity="0.1"/>
+                        <path d="M 100 160 L 500 80" stroke="#10b981" stroke-width="1" opacity="0.1"/>
+                        
+                        <text x="280" y="150" font-size="14" fill="#f59e0b" text-anchor="middle" font-weight="bold">ATTENTION: chat</text>
+                        <path d="M 280 160 L 100 80" stroke="#f59e0b" stroke-width="1" opacity="0.2"/>
+                        <path d="M 280 160 L 180 80" stroke="#f59e0b" stroke-width="4" opacity="0.7"/>
+                        <path d="M 280 160 L 260 80" stroke="#f59e0b" stroke-width="2" opacity="0.4"/>
+                        
+                        <!-- Output -->
+                        <text x="400" y="250" font-size="14" fill="#ec4899" text-anchor="middle" font-weight="bold">Target: Le chat...</text>
+                        
+                        <!-- Benefits box -->
+                        <rect x="50" y="300" width="700" height="80" fill="rgba(16, 185, 129, 0.1)" stroke="#10b981" stroke-width="2" rx="5"/>
+                        <text x="400" y="325" font-size="13" fill="#10b981" text-anchor="middle" font-weight="bold">✓ Model focuses on relevant words</text>
+                        <text x="400" y="345" font-size="13" fill="#10b981" text-anchor="middle" font-weight="bold">✓ Handles long sentences better</text>
+                        <text x="400" y="365" font-size="13" fill="#10b981" text-anchor="middle" font-weight="bold">✓ Better word order transformation</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Architecture -->
+            <h2>🏗️ How the Attention Mechanism Works</h2>
+            
+            <div class="grid">
+                <div class="card animated">
+                    <h3><span class="icon">📥</span> Step 1: Encoder</h3>
+                    <p>The encoder reads the entire source sentence (English) using a Bidirectional RNN. It creates multiple "annotations" - one for each word - that capture context from before and after that word.</p>
+                    <div class="code-block"><code>Bidirectional RNN → Annotations</code></div>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">👀</span> Step 2: Attention</h3>
+                    <p>For each target word (French), a special "attention" layer scores how important each source word is. It's like asking: "When translating this target word, which source words should I focus on?"</p>
+                    <div class="code-block"><code>Compute alignment scores & weights</code></div>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">📤</span> Step 3: Context Vector</h3>
+                    <p>Based on attention scores, create a weighted summary of all source annotations. Higher scores = more influence on the translation. This becomes the decoder's input.</p>
+                    <div class="code-block"><code>Weighted sum of annotations</code></div>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">🎯</span> Step 4: Decoder</h3>
+                    <p>The decoder uses the context vector plus previous words to generate the next target word. This repeats for every word in the target sentence.</p>
+                    <div class="code-block"><code>GRU + Attention → Next word</code></div>
+                </div>
+            </div>
+
+            <!-- Key Innovation -->
+            <div class="highlight-box">
+                <h4>🌟 Why This Changed Everything</h4>
+                <p style="margin: 1rem 0;">The attention mechanism is like having a human translator who can highlight which parts of the source sentence are most relevant for each target word. Before attention, it was like translation with blurry vision. After attention, the model could "see" which words mattered for each translation decision.</p>
+                <p><strong>Result:</strong> Translation quality improved dramatically, especially for long sentences (30+ words). The model learned alignments that make linguistic sense - adjectives move together, pronouns align correctly with their referents.</p>
+            </div>
+
+            <!-- Results -->
+            <h2>📊 Research Results</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Model</th>
+                        <th>All Sentences</th>
+                        <th>Without Unknown Words</th>
+                        <th>Key Achievement</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>RNNenc-30 (No Attention)</td>
+                        <td>13.93 BLEU</td>
+                        <td>24.19 BLEU</td>
+                        <td>Baseline - struggles with length</td>
+                    </tr>
+                    <tr>
+                        <td>RNNsearch-30 (With Attention)</td>
+                        <td>21.50 BLEU ⬆️</td>
+                        <td>31.44 BLEU ⬆️</td>
+                        <td>+54% improvement!</td>
+                    </tr>
+                    <tr>
+                        <td>RNNsearch-50 (With Attention)</td>
+                        <td>26.75 BLEU 🚀</td>
+                        <td>34.16 BLEU 🚀</td>
+                        <td>Handles long sentences!</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <!-- SECTION 2: PROJECT IMPLEMENTATION -->
+        <section id="project">
+            <!-- Header -->
+            <div class="header">
+                <h1>🚀 VR-NLP-AI: Bringing Translation to VR/AR</h1>
+                <p class="subtitle">Implementing Attention Mechanism in an Immersive Web Experience</p>
+            </div>
+
+            <!-- Vision -->
+            <div class="grid-2">
+                <div class="svg-container">
+                    <svg viewBox="0 0 400 350" xmlns="http://www.w3.org/2000/svg">
+                        <!-- VR Headset -->
+                        <ellipse cx="200" cy="100" rx="60" ry="50" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="2"/>
+                        <circle cx="160" cy="90" r="20" fill="rgba(0, 217, 255, 0.3)" stroke="#00d9ff" stroke-width="2"/>
+                        <circle cx="240" cy="90" r="20" fill="rgba(0, 217, 255, 0.3)" stroke="#00d9ff" stroke-width="2"/>
+                        <text x="200" y="105" font-size="14" fill="#00d9ff" text-anchor="middle" font-weight="bold">VR Experience</text>
+                        
+                        <!-- Down arrow -->
+                        <path d="M 200 150 L 200 180" stroke="#ec4899" stroke-width="3" marker-end="url(#arrowhead2)"/>
+                        
+                        <!-- Translation Dashboard -->
+                        <rect x="80" y="190" width="240" height="100" fill="rgba(99, 102, 241, 0.1)" stroke="#6366f1" stroke-width="2" rx="5"/>
+                        <text x="200" y="210" font-size="12" fill="#00d9ff" text-anchor="middle" font-weight="bold">Translation Panel</text>
+                        <rect x="90" y="220" width="220" height="20" fill="#0f172a" stroke="#6366f1" stroke-width="1" rx="3"/>
+                        <text x="100" y="233" font-size="10" fill="rgba(255,255,255,0.5)">English: "Hello world"</text>
+                        <rect x="90" y="250" width="220" height="20" fill="#0f172a" stroke="#00d9ff" stroke-width="1" rx="3"/>
+                        <text x="100" y="263" font-size="10" fill="#00d9ff">French: "Bonjour monde"</text>
+                        
+                        <!-- Python Backend -->
+                        <rect x="80" y="310" width="240" height="30" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="2" rx="5"/>
+                        <text x="200" y="330" font-size="12" fill="#10b981" text-anchor="middle" font-weight="bold">PyTorch Model (Attention) + Flask API</text>
+                        
+                        <defs>
+                            <marker id="arrowhead2" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                <polygon points="0 0, 10 5, 0 10" fill="#ec4899"/>
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+                <div>
+                    <h2>🎯 Our Vision</h2>
+                    <p style="font-size: 1.1rem; margin: 1rem 0;">We're bringing cutting-edge neural machine translation into immersive VR/AR environments. Imagine:</p>
+                    <ul class="feature-list">
+                        <li>Translation panels you can grab and manipulate in VR</li>
+                        <li>Real-time multilingual communication in virtual spaces</li>
+                        <li>Interactive visualization of how attention works</li>
+                        <li>Educational tool to understand AI translation</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Architecture -->
+            <h2>🏗️ Our Architecture</h2>
+            <div class="process-flow" style="flex-direction: column; gap: 3rem; margin: 3rem 0;">
+                <div style="width: 100%;">
+                    <div class="process-flow">
+                        <div class="process-step floating">
+                            <div class="step-number">1</div>
+                            <h4 style="color: var(--accent);">Frontend</h4>
+                            <p style="text-align: center; font-size: 0.9rem;">TypeScript + IWSDK</p>
+                        </div>
+                        <div class="process-arrow">→</div>
+                        <div class="process-step floating" style="animation-delay: 0.3s;">
+                            <div class="step-number">2</div>
+                            <h4 style="color: var(--accent);">API Layer</h4>
+                            <p style="text-align: center; font-size: 0.9rem;">Flask Server</p>
+                        </div>
+                        <div class="process-arrow">→</div>
+                        <div class="process-step floating" style="animation-delay: 0.6s;">
+                            <div class="step-number">3</div>
+                            <h4 style="color: var(--accent);">AI Model</h4>
+                            <p style="text-align: center; font-size: 0.9rem;">PyTorch NMT</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tech Stack -->
+            <h2>⚙️ Technology Stack</h2>
+            <div class="grid">
+                <div class="card animated">
+                    <h3><span class="icon">🎨</span> Frontend</h3>
+                    <ul style="list-style: none;">
+                        <li>✓ TypeScript</li>
+                        <li>✓ Immersive Web SDK (IWSDK)</li>
+                        <li>✓ Three.js (3D rendering)</li>
+                        <li>✓ WebXR API</li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">Creates interactive VR/AR interfaces with 3D models and real-time interaction.</p>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">🔗</span> Backend</h3>
+                    <ul style="list-style: none;">
+                        <li>✓ Python Flask</li>
+                        <li>✓ PyTorch</li>
+                        <li>✓ CORS Support</li>
+                        <li>✓ REST API</li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">API endpoint that receives text and returns translations with attention visualizations.</p>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">🧠</span> ML Model</h3>
+                    <ul style="list-style: none;">
+                        <li>✓ Seq2Seq with Attention</li>
+                        <li>✓ Bidirectional Encoder</li>
+                        <li>✓ GRU Decoder</li>
+                        <li>✓ Bahdanau Attention</li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">Implements the exact attention mechanism from the 2015 paper.</p>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">📦</span> Deployment</h3>
+                    <ul style="list-style: none;">
+                        <li>✓ Vite (bundler)</li>
+                        <li>✓ npm (pkg manager)</li>
+                        <li>✓ HTTPS localhost</li>
+                        <li>✓ Docker ready</li>
+                    </ul>
+                    <p style="margin-top: 1rem; font-size: 0.9rem; color: rgba(255,255,255,0.7);">Fast development workflow with hot reload and production builds.</p>
+                </div>
+            </div>
+
+            <!-- Features -->
+            <h2>✨ Project Features</h2>
+            <div class="grid-2">
+                <div>
+                    <ul class="feature-list">
+                        <li>
+                            <strong>Real-time Translation</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Type English, get instant French translation</p>
+                        </li>
+                        <li>
+                            <strong>VR/AR Ready</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Works in Meta Quest, HoloLens, and VR browsers</p>
+                        </li>
+                        <li>
+                            <strong>Interactive UI</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Grab, rotate, and resize panels in 3D space</p>
+                        </li>
+                        <li>
+                            <strong>Visualize Attention</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">See which words the model focuses on</p>
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <ul class="feature-list">
+                        <li>
+                            <strong>3D Environment</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Interactive desk with plants, lighting, models</p>
+                        </li>
+                        <li>
+                            <strong>Animation System</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Smooth controls and visual feedback</p>
+                        </li>
+                        <li>
+                            <strong>Sound Effects</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Audio feedback for interactions</p>
+                        </li>
+                        <li>
+                            <strong>Educational Mode</strong>
+                            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: rgba(255,255,255,0.8);">Learn how attention mechanisms work</p>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Data Flow -->
+            <h2>📡 Data Flow</h2>
+            <div class="svg-container">
+                <svg viewBox="0 0 800 300" xmlns="http://www.w3.org/2000/svg">
+                    <!-- Step 1: User Input -->
+                    <rect x="50" y="50" width="120" height="60" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="2" rx="5"/>
+                    <text x="110" y="75" font-size="12" fill="#00d9ff" text-anchor="middle" font-weight="bold">User Types</text>
+                    <text x="110" y="95" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">"Hello"</text>
+                    
+                    <!-- Arrow -->
+                    <path d="M 170 80 L 210 80" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead3)"/>
+                    
+                    <!-- Step 2: Frontend -->
+                    <rect x="210" y="50" width="120" height="60" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="2" rx="5"/>
+                    <text x="270" y="75" font-size="12" fill="#00d9ff" text-anchor="middle" font-weight="bold">IWSDK</text>
+                    <text x="270" y="95" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">Send to API</text>
+                    
+                    <!-- Arrow -->
+                    <path d="M 330 80 L 370 80" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead3)"/>
+                    
+                    <!-- Step 3: API -->
+                    <rect x="370" y="50" width="120" height="60" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="2" rx="5"/>
+                    <text x="430" y="75" font-size="12" fill="#10b981" text-anchor="middle" font-weight="bold">Flask API</text>
+                    <text x="430" y="95" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">Process Request</text>
+                    
+                    <!-- Arrow -->
+                    <path d="M 490 80 L 530 80" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead3)"/>
+                    
+                    <!-- Step 4: Model -->
+                    <rect x="530" y="50" width="120" height="60" fill="rgba(236, 72, 153, 0.2)" stroke="#ec4899" stroke-width="2" rx="5"/>
+                    <text x="590" y="75" font-size="12" fill="#ec4899" text-anchor="middle" font-weight="bold">PyTorch</text>
+                    <text x="590" y="95" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">Translate</text>
+                    
+                    <!-- Return Arrow -->
+                    <path d="M 590 110 L 590 160 L 110 160 L 110 110" stroke="#f59e0b" stroke-width="3" marker-end="url(#arrowhead4)" fill="none"/>
+                    
+                    <!-- Response -->
+                    <rect x="50" y="180" width="120" height="60" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" stroke-width="2" rx="5"/>
+                    <text x="110" y="205" font-size="12" fill="#10b981" text-anchor="middle" font-weight="bold">Result</text>
+                    <text x="110" y="225" font-size="11" fill="rgba(255,255,255,0.7)" text-anchor="middle">"Bonjour"</text>
+                    
+                    <!-- Timeline -->
+                    <text x="400" y="280" font-size="12" fill="rgba(255,255,255,0.6)" text-anchor="middle">⏱️ End-to-end: ~50-100ms</text>
+                    
+                    <defs>
+                        <marker id="arrowhead3" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                            <polygon points="0 0, 10 5, 0 10" fill="#10b981"/>
+                        </marker>
+                        <marker id="arrowhead4" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                            <polygon points="0 0, 10 5, 0 10" fill="#f59e0b"/>
+                        </marker>
+                    </defs>
+                </svg>
+            </div>
+
+            <!-- Development Timeline -->
+            <h2>📅 Development Journey</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4 style="color: var(--accent); margin-bottom: 0.5rem;">Phase 1: Foundation</h4>
+                        <p>Set up IWSDK project structure, configure Vite bundler, and establish development environment</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4 style="color: var(--accent); margin-bottom: 0.5rem;">Phase 2: Backend</h4>
+                        <p>Implement PyTorch model with Bahdanau attention, create encoder-decoder architecture, and Flask API</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4 style="color: var(--accent); margin-bottom: 0.5rem;">Phase 3: Frontend Integration</h4>
+                        <p>Build VR panels using IWSDK, implement UI components, and connect to Flask API</p>
+                    </div>
+                </div>
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <h4 style="color: var(--accent); margin-bottom: 0.5rem;">Phase 4: Polish</h4>
+                        <p>Add 3D models, sound effects, animations, and attention visualization system</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 3: HOW IT ALL WORKS -->
+        <section id="comparison">
+            <!-- Header -->
+            <div class="header">
+                <h1>⚡ From Theory to Practice: The Complete Journey</h1>
+                <p class="subtitle">How we transformed a 2015 research paper into an immersive VR application</p>
+            </div>
+
+            <!-- Comparison -->
+            <div class="grid-2">
+                <div>
+                    <h2>🎓 The Research (2015)</h2>
+                    <ul class="feature-list">
+                        <li>
+                            <strong>Goal:</strong> Improve machine translation for long sentences
+                        </li>
+                        <li>
+                            <strong>Innovation:</strong> Attention mechanism to focus on relevant words
+                        </li>
+                        <li>
+                            <strong>Architecture:</strong> Bidirectional encoder + GRU decoder + attention
+                        </li>
+                        <li>
+                            <strong>Results:</strong> +54% improvement over baseline
+                        </li>
+                        <li>
+                            <strong>Impact:</strong> Foundation for modern AI (BERT, GPT, Transformers)
+                        </li>
+                    </ul>
+                </div>
+                <div>
+                    <h2>🚀 Our Implementation (2024)</h2>
+                    <ul class="feature-list">
+                        <li>
+                            <strong>Goal:</strong> Make translation accessible in VR/AR
+                        </li>
+                        <li>
+                            <strong>Innovation:</strong> VR UI + real-time API + attention visualization
+                        </li>
+                        <li>
+                            <strong>Architecture:</strong> IWSDK frontend + Flask + PyTorch backend
+                        </li>
+                        <li>
+                            <strong>Results:</strong> Interactive, immersive translation experience
+                        </li>
+                        <li>
+                            <strong>Impact:</strong> Educational tool for understanding AI
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Deep Dive: How Attention Works -->
+            <h2>🔬 Deep Dive: The Attention Mechanism Step by Step</h2>
+
+            <div class="process-flow" style="gap: 3rem; margin: 3rem 0; flex-direction: column;">
+                <div style="width: 100%;">
+                    <h3 style="color: var(--accent); margin-bottom: 1.5rem;">Step-by-Step Execution</h3>
+                    
+                    <div class="svg-container">
+                        <svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Title -->
+                            <text x="450" y="25" font-size="16" fill="#e2e8f0" text-anchor="middle" font-weight="bold">Translating: "The cat" → "Le chat"</text>
+                            
+                            <!-- Source sentence -->
+                            <g id="encoder">
+                                <text x="100" y="60" font-size="12" fill="#00d9ff" font-weight="bold">ENCODER (Bidirectional)</text>
+                                <text x="100" y="85" font-size="11" fill="#e2e8f0">Input: The cat sat</text>
+                                
+                                <!-- Forward RNN -->
+                                <rect x="50" y="110" width="100" height="40" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="1" rx="3"/>
+                                <text x="100" y="138" font-size="10" fill="#e2e8f0" text-anchor="middle">→ Forward</text>
+                                
+                                <!-- Backward RNN -->
+                                <rect x="160" y="110" width="100" height="40" fill="rgba(236, 72, 153, 0.2)" stroke="#ec4899" stroke-width="1" rx="3"/>
+                                <text x="210" y="138" font-size="10" fill="#e2e8f0" text-anchor="middle">← Backward</text>
+                                
+                                <!-- Output annotations -->
+                                <text x="100" y="175" font-size="11" fill="#10b981" font-weight="bold">Annotations (h₁, h₂, h₃):</text>
+                                <circle cx="75" cy="200" r="12" fill="rgba(16, 185, 129, 0.3)" stroke="#10b981"/>
+                                <text x="75" y="205" font-size="10" fill="#10b981" text-anchor="middle">The</text>
+                                
+                                <circle cx="125" cy="200" r="12" fill="rgba(16, 185, 129, 0.3)" stroke="#10b981"/>
+                                <text x="125" y="205" font-size="10" fill="#10b981" text-anchor="middle">cat</text>
+                                
+                                <circle cx="175" cy="200" r="12" fill="rgba(16, 185, 129, 0.3)" stroke="#10b981"/>
+                                <text x="175" y="205" font-size="10" fill="#10b981" text-anchor="middle">sat</text>
+                            </g>
+                            
+                            <!-- Decoder starts -->
+                            <g id="decoder-start">
+                                <text x="400" y="60" font-size="12" fill="#f59e0b" font-weight="bold">DECODER (Generating "Le")</text>
+                                <text x="400" y="85" font-size="11" fill="#e2e8f0">First target word</text>
+                                
+                                <!-- Hidden state -->
+                                <rect x="350" y="110" width="100" height="40" fill="rgba(99, 102, 241, 0.2)" stroke="#6366f1" stroke-width="1" rx="3"/>
+                                <text x="400" y="138" font-size="10" fill="#e2e8f0" text-anchor="middle">hidden: h₁</text>
+                            </g>
+                            
+                            <!-- Attention mechanism -->
+                            <g id="attention">
+                                <text x="450" y="185" font-size="12" fill="#ec4899" font-weight="bold">ATTENTION CALCULATION</text>
+                                
+                                <!-- Score calculation -->
+                                <text x="450" y="215" font-size="11" fill="#e2e8f0" text-anchor="middle">For each word, calculate:</text>
+                                <text x="450" y="235" font-size="10" fill="#00d9ff" text-anchor="middle">score₁ = h₁ · The = 0.8 (high!)</text>
+                                <text x="450" y="255" font-size="10" fill="#00d9ff" text-anchor="middle">score₂ = h₁ · cat = 0.6 (medium)</text>
+                                <text x="450" y="275" font-size="10" fill="#00d9ff" text-anchor="middle">score₃ = h₁ · sat = 0.3 (low)</text>
+                                
+                                <!-- Softmax -->
+                                <text x="450" y="305" font-size="11" fill="#e2e8f0" text-anchor="middle">Apply softmax → weights:</text>
+                                <text x="450" y="325" font-size="10" fill="#10b981" text-anchor="middle">α₁ = 60% (focus on "The")</text>
+                                <text x="450" y="345" font-size="10" fill="#10b981" text-anchor="middle">α₂ = 30% (some focus on "cat")</text>
+                                <text x="450" y="365" font-size="10" fill="#10b981" text-anchor="middle">α₃ = 10% (little focus on "sat")</text>
+                            </g>
+                            
+                            <!-- Context vector -->
+                            <g id="context">
+                                <text x="700" y="60" font-size="12" fill="#10b981" font-weight="bold">CONTEXT VECTOR</text>
+                                <text x="700" y="85" font-size="11" fill="#e2e8f0">Weighted combination:</text>
+                                
+                                <!-- Formula -->
+                                <rect x="650" y="110" width="100" height="80" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="1" rx="3"/>
+                                <text x="700" y="130" font-size="10" fill="#10b981" text-anchor="middle" font-weight="bold">Context =</text>
+                                <text x="700" y="150" font-size="9" fill="#e2e8f0" text-anchor="middle">0.6 × h_The +</text>
+                                <text x="700" y="165" font-size="9" fill="#e2e8f0" text-anchor="middle">0.3 × h_cat +</text>
+                                <text x="700" y="180" font-size="9" fill="#e2e8f0" text-anchor="middle">0.1 × h_sat</text>
+                            </g>
+                            
+                            <!-- Final output -->
+                            <g id="output">
+                                <text x="700" y="235" font-size="12" fill="#ec4899" font-weight="bold">OUTPUT</text>
+                                <rect x="650" y="250" width="100" height="100" fill="rgba(236, 72, 153, 0.15)" stroke="#ec4899" stroke-width="1" rx="3"/>
+                                <text x="700" y="270" font-size="11" fill="#e2e8f0" text-anchor="middle" font-weight="bold">Decoder uses:</text>
+                                <text x="700" y="290" font-size="10" fill="#e2e8f0" text-anchor="middle">• Context vector</text>
+                                <text x="700" y="305" font-size="10" fill="#e2e8f0" text-anchor="middle">• Previous hidden</text>
+                                <text x="700" y="320" font-size="10" fill="#e2e8f0" text-anchor="middle">• Prev. word</text>
+                                <text x="700" y="340" font-size="11" fill="#10b981" text-anchor="middle" font-weight="bold">→ "Le"</text>
+                            </g>
+                            
+                            <!-- Arrows -->
+                            <path d="M 260 180 Q 300 150 350 130" stroke="#f59e0b" stroke-width="2" fill="none" marker-end="url(#arrowhead5)"/>
+                            <path d="M 450 140 L 450 180" stroke="#ec4899" stroke-width="2" fill="none" marker-end="url(#arrowhead6)"/>
+                            <path d="M 520 265 L 640 290" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#arrowhead7)"/>
+                            
+                            <defs>
+                                <marker id="arrowhead5" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                    <polygon points="0 0, 10 5, 0 10" fill="#f59e0b"/>
+                                </marker>
+                                <marker id="arrowhead6" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                    <polygon points="0 0, 10 5, 0 10" fill="#ec4899"/>
+                                </marker>
+                                <marker id="arrowhead7" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
+                                    <polygon points="0 0, 10 5, 0 10" fill="#10b981"/>
+                                </marker>
+                            </defs>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Why This Matters -->
+            <h2>💡 Why This Breakthrough Matters</h2>
+            <div class="grid">
+                <div class="card animated">
+                    <h3><span class="icon">🧬</span> Foundation of Modern AI</h3>
+                    <p>The attention mechanism inspired Transformers (2017), which powers:</p>
+                    <ul style="margin-top: 1rem; list-style: inside;">
+                        <li>✓ BERT</li>
+                        <li>✓ GPT & GPT-3/4</li>
+                        <li>✓ Claude</li>
+                        <li>✓ ChatGPT</li>
+                    </ul>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">🎓</span> Educational Value</h3>
+                    <p>Understanding attention helps you grasp:</p>
+                    <ul style="margin-top: 1rem; list-style: inside;">
+                        <li>✓ How LLMs work</li>
+                        <li>✓ Context windows</li>
+                        <li>✓ Multi-head attention</li>
+                        <li>✓ Why AI understands context</li>
+                    </ul>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">🌍</span> Real-World Impact</h3>
+                    <p>Powers practical applications:</p>
+                    <ul style="margin-top: 1rem; list-style: inside;">
+                        <li>✓ Google Translate</li>
+                        <li>✓ Real-time subtitles</li>
+                        <li>✓ Medical NLP</li>
+                        <li>✓ Code generation</li>
+                    </ul>
+                </div>
+
+                <div class="card animated">
+                    <h3><span class="icon">🚀</span> VR/AR Integration</h3>
+                    <p>Our implementation shows:</p>
+                    <ul style="margin-top: 1rem; list-style: inside;">
+                        <li>✓ Real-time translation in VR</li>
+                        <li>✓ Visual AI explanation</li>
+                        <li>✓ Interactive learning</li>
+                        <li>✓ Immersive education</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Performance Comparison -->
+            <h2>📊 Research vs Our Implementation</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aspect</th>
+                        <th>Original Research (2015)</th>
+                        <th>Our Implementation (2024)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Interface</strong></td>
+                        <td>Command line / Text files</td>
+                        <td>Immersive 3D VR/AR environment</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Interaction</strong></td>
+                        <td>Batch processing</td>
+                        <td>Real-time interactive</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Visualization</strong></td>
+                        <td>Attention matrices (heatmaps)</td>
+                        <td>3D interactive attention flows</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Target Users</strong></td>
+                        <td>Researchers / ML engineers</td>
+                        <td>Anyone with VR headset</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Learning Curve</strong></td>
+                        <td>Steep (requires ML knowledge)</td>
+                        <td>Gentle (visual learning)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Model Size</strong></td>
+                        <td>GRU (350M parameters)</td>
+                        <td>GRU (5M parameters - optimized)</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Inference Speed</strong></td>
+                        <td>~500ms per sentence</td>
+                        <td>~50-100ms per word</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <!-- Key Learnings -->
+            <div class="highlight-box">
+                <h4>🎯 Key Insights from Implementation</h4>
+                <ul style="margin: 1rem 0; color: #e2e8f0;">
+                    <li style="margin: 0.75rem 0;"><strong>1. Attention is Universal:</strong> The mechanism works for any sequence-to-sequence task - translation, summarization, code generation, etc.</li>
+                    <li style="margin: 0.75rem 0;"><strong>2. Less is More:</strong> We achieved comparable results with 1/70th the parameters by focusing on quality architecture.</li>
+                    <li style="margin: 0.75rem 0;"><strong>3. Visualization Matters:</strong> Seeing attention weights helps understand model decisions - crucial for debugging and learning.</li>
+                    <li style="margin: 0.75rem 0;"><strong>4. VR Context Helps:</strong> Immersive 3D makes abstract concepts tangible - users "feel" how attention focuses on words.</li>
+                    <li style="margin: 0.75rem 0;"><strong>5. API-First Design:</strong> Separating backend (Python) from frontend (TypeScript) enables flexibility and scalability.</li>
+                </ul>
+            </div>
+
+            <!-- Call to Action -->
+            <div style="text-align: center; margin: 3rem 0; padding: 2rem; background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(236, 72, 153, 0.2)); border-radius: 1rem;">
+                <h2 style="margin-bottom: 1rem;">🚀 Ready to Explore?</h2>
+                <p style="font-size: 1.1rem; margin-bottom: 1.5rem;">Experience attention mechanism in VR!</p>
+                <button class="btn" onclick="alert('Start the VR application at: https://localhost:8081/')">Launch VR Experience</button>
+                <button class="btn" style="background: transparent; border: 2px solid var(--primary); margin-left: 1rem;" onclick="alert('Visit: https://github.com/Quddos/vr-nlp-ai')">View on GitHub</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer>
+        <p style="margin-bottom: 1rem;">
+            <strong>VR-NLP-AI Project</strong> - Bringing Neural Machine Translation to Immersive Environments
+        </p>
+        <p>
+            📚 Paper: Bahdanau et al., "Neural Machine Translation by Jointly Learning to Align and Translate" (ICLR 2015)
+        </p>
+        <p style="margin-top: 1rem; font-size: 0.9rem;">
+            Built with ❤️ using IWSDK, PyTorch,  and Flask | 2024
+        </p>
+    </footer>
+
+    <script>
+        function switchSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Mark button as active
+            event.target.classList.add('active');
+            
+            // Scroll to top
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Add animation to cards on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -100px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.card, .animated').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(20px)';
+            observer.observe(el);
+        });
+    </script>
+</body>
+</html>
